@@ -4,6 +4,7 @@ import os
 
 app = Flask(__name__)
 
+# Čítanie z environment variables
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
 
@@ -13,7 +14,8 @@ def send_telegram_message(message):
         "chat_id": CHAT_ID,
         "text": message
     }
-    response = requests.post(url, data=payload)
+    response = requests.post(url, json=payload)
+    print("Telegram odpoveď:", response.status_code, response.text)  # DEBUG výpis
     return response.json()
 
 @app.route('/', methods=['POST'])
@@ -25,3 +27,4 @@ def receive_alert():
 
 # Spustenie servera
 app.run(host='0.0.0.0', port=8080)
+
