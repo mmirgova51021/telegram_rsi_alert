@@ -4,33 +4,44 @@ import os
 
 app = Flask(__name__)
 
-BOT_TOKEN = os.getenv('BOT_TOKEN')
-CHAT_ID = os.getenv('CHAT_ID')
+# Telegram údaje (Render > Environment Variables)
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
 
-def send_telegram_message(message):
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": CHAT_ID,
-        "text": message
-    }
-    response = requests.post(url, json=payload)
-    print(f"[Telegram] Odpoveď: {response.text}")
-    return response.json()
+# URL pre posielanie správ
+TELEGRAM_URL = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
-@app.route("/", methods=["POST"])
-def receive_alert():
+@app.route('/', methods=['POST'])
+def webhook():
     data = request.get_json()
-    message = data.get("message", "").strip().upper().replace("\n", "").replace("\r", "")
-    
-    if message in ["BUY", "SELL"]:
-        send_telegram_message(message)
-        return {"status": "OK", "sent": message}, 200
-    else:
-        print(f"[IGNORED] Správa nebola BUY/SELL: {message}")
-        return {"status": "ignored"}, 200
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080)
+    # Ak správa nie je validná
+    if not data:
+        return "No data received", 400
+
+    # Očakávame formát: {"text": "BUY"} alebo {"message": "SELL"}
+    message = data.get("text") or data.get("message")
+
+    if message:
+        payload = {
+            'chat_id': CHAT_ID,
+            'text': message
+        }
+        response = requests.post(TELEGRAM_URL, data=payload)
+
+        if response.status_code == 200:
+            return "Message sent to Telegram", 200
+        else:
+            return f"Failed to send message. Error: {response.text}", 500
+    else:
+        return "No 'text' or 'message' field in JSON", 400
+
+@app.route('/', methods=['GET'])
+def home():
+    return "Telegram RSI Alert bot is running!", 200
+
+if __name__ == '__main__':
+    app.run()
 
 
 
